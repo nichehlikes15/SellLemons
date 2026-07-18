@@ -15,6 +15,7 @@ local TycoonBalances = require(ReplicatedStorage.Modules.Tycoon.Component.Tycoon
 local ClientTycoonRebirth = require(ReplicatedStorage.Modules.Tycoon.Component.Client.ClientTycoonRebirth)
 local Huge = require(ReplicatedStorage.Modules.Huge)
 local ClientTycoonPowers = require(ReplicatedStorage.Modules.Tycoon.Component.Client.ClientTycoonPowers)
+local ClientTycoonBalances = require(ReplicatedStorage.Modules.Tycoon.Component.Client.ClientTycoonBalances)
 
 local Config = require(ReplicatedStorage.Config)
 
@@ -78,6 +79,12 @@ section1:toggle("Auto Purchase", true, function(v)
     task.spawn(function()
         while getgenv().farmsettings.purchase and getgenv().UIRunning do
             local success, err = pcall(function()
+                local tycoon = Tycoon.getLocal()
+
+                if not tycoon then
+                    return
+                end
+
                 local purchase = GetNextPurchase()
 
 				if purchase.DisplayName == "Cup Stand" then
@@ -90,14 +97,20 @@ section1:toggle("Auto Purchase", true, function(v)
                     return
                 end
 
-                purchase:TryPurchaseAsync()
+                local balances = tycoon:GetComponent(ClientTycoonBalances)
+                local cash = balances:GetCash()
+                local price = purchase:GetPrice()
+
+                if cash >= price then
+                    purchase:TryPurchaseAsync()
+                end
             end)
 
             if not success then
                 warn("Purchase failed:", err)
             end
 
-            task.wait(0.01)
+            task.wait(0.005)
         end
     end)
 end)
@@ -208,27 +221,59 @@ section1:toggle("Auto Upgrade", false, function(v)
     end
 
     task.spawn(function()
-        while getgenv().farmsettings.upgrade and getgenv().UIRunning do
-            local success, err = pcall(function()
-                local tycoon = Tycoon.getLocal()
 
-                if not tycoon then
-                    return
+        local tycoon
+
+        repeat
+            task.wait(0.5)
+            tycoon = Tycoon.getLocal()
+        until tycoon
+
+        local analyzer = tycoon:GetComponent(TycoonAnalyzer)
+        local balances = tycoon:GetComponent(ClientTycoonBalances)
+
+        if not analyzer or not balances then
+            warn("Missing Tycoon components")
+            return
+        end
+
+        while getgenv().farmsettings.upgrade and getgenv().UIRunning do
+
+            local earners = analyzer:GetEarners()
+
+            for name, earner in pairs(earners) do
+
+                if not getgenv().farmsettings.upgrade then
+                    break
                 end
 
-				local powers = tycoon:GetComponent(ClientTycoonPowers)
-				local maxLevel = powers:GetLevel("UpgradeStack")
+                -- Same check as UIManagePageManage
+                if earner:IsEnabled() then
 
-				local max = (Config.Powers.UpgradeStack.Display.Bonuses[maxLevel + 1] or "+1"):gsub("%+", "")
-				tycoonNum.Purchases["Lemon Stand"]["Lemon Stand"]["Lemon Stand"].Upgrade:InvokeServer(max)
+                    local info = earner:GetNextUpgradeInfo()
 
-            end)
+                    -- Same check as UIManageTileEarner
+                    if info and not info.Max then
 
-            if not success then
-                warn("Evolution failed:", err)
+                        local cash = balances:GetCash()
+
+                        -- Huge numbers compare correctly because both are Huge values
+                        if info.Price <= cash then
+                            local success, err = pcall(function()
+                                earner:Upgrade(info.Count, true)
+                            end)
+
+                            if not success then
+                                warn("Upgrade failed:", name, err)
+                            end
+
+                            task.wait(0.05)
+                        end
+                    end
+                end
             end
 
-            task.wait(0.05)
+            task.wait(0.005)
         end
     end)
 end)
