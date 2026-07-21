@@ -1,10 +1,4 @@
-if game.GameId == 79268393072444 then
-    local CalmLib = loadstring(game:HttpGet("https://raw.githubusercontent.com/nichehlikes15/robloxui/refs/heads/main/main.lua"))()
-    
-    local window = CalmLib:win("Sell Lemons")
-    local section1 = window:tab("Autofarm", "rbxassetid://109121102062195")
-    local section2 = window:tab("Settings", "rbxassetid://99579688577014")
-    
+if game.GameId == 7395930870 then
     local plr = game:GetService("Players").LocalPlayer
     local ReplicatedStorage = game:GetService("ReplicatedStorage")
     
@@ -24,32 +18,95 @@ if game.GameId == 79268393072444 then
     local TARGET_MULTIPLIER = 100000
     local introPurchased = false
     
-    --print("STATUS:", getgenv().UIRunning)
-    getgenv().farmsettings = {
-        purchase = false,
-        power = false,
-        upgrade = false,
-        rebirth = false,
-        evolution = false,
-        ascend = false
-    }
-    
     local tycoonNum
     for _, v in pairs(workspace:GetChildren()) do
         if v.Name:find("Tycoon") and v:FindFirstChild("Owner").Value == plr then
             tycoonNum = v
         end
     end
-    
-    local function RestoreSettings(originalSettings)
-        getgenv().farmsettings.power = originalSettings.power
-        getgenv().farmsettings.upgrade = originalSettings.upgrade
-        getgenv().farmsettings.rebirth = originalSettings.rebirth
-        getgenv().farmsettings.evolution = originalSettings.evolution
-    
-        print("Previous settings restored.")
+
+    local Library =
+        loadstring(
+        game:HttpGetAsync("https://github.com/ActualMasterOogway/Fluent-Renewed/releases/latest/download/Fluent.luau")
+    )()
+    local SaveManager =
+        loadstring(
+        game:HttpGetAsync(
+            "https://raw.githubusercontent.com/ActualMasterOogway/Fluent-Renewed/master/Addons/SaveManager.luau"
+        )
+    )()
+    local InterfaceManager =
+        loadstring(
+        game:HttpGetAsync(
+            "https://raw.githubusercontent.com/ActualMasterOogway/Fluent-Renewed/master/Addons/InterfaceManager.luau"
+        )
+    )()
+    local Window =
+        Library:CreateWindow {
+        Title = "Sell Lemons",
+        SubTitle = "by Nichehlikes15 | Discord",
+        TabWidth = 160,
+        Size = UDim2.fromOffset(830, 525),
+        Resize = true,
+        MinSize = Vector2.new(470, 380),
+        Acrylic = true,
+        Theme = "Dark",
+        MinimizeKey = Enum.KeyCode.LeftControl
+    }
+    local Tabs = {
+        Farm = Window:CreateTab {
+            Title = "Farm",
+            Icon = "circle-dollar-sign"
+        },
+        Stats = Window:CreateTab {
+            Title = "Players Stats",
+            Icon = "chart-no-axes-column"
+        },
+        Settings = Window:CreateTab {
+            Title = "Settings",
+            Icon = "settings"
+        }
+    }
+    local Options = Library.Options
+    local UIActive = true
+
+    Library.Unloaded = function()
+        UIActive = false
     end
     
+    local RebirthStat = Tabs.Stats:CreateParagraph(
+        "RebirthStat",
+        {
+            Title = "Total Rebirth:",
+            Content = tycoonNum.Values.Values:GetAttribute("TotalRebirths")
+        }
+    )
+    tycoonNum.Values.Values:GetAttributeChangedSignal("TotalRebirths"):Connect(function()
+        RebirthStat:SetValue(tostring(tycoonNum.Values.Values:GetAttribute("TotalRebirths") or 0))
+    end)
+    
+    local EvolveStat = Tabs.Stats:CreateParagraph(
+        "EvolveStat",
+        {
+            Title = "Total Evolves:",
+            Content = tycoonNum.Values.Values:GetAttribute("TotalEvolves")
+        }
+    )
+    tycoonNum.Values.Values:GetAttributeChangedSignal("TotalEvolves"):Connect(function()
+        EvolveStat:SetValue(tostring(tycoonNum.Values.Values:GetAttribute("TotalEvolves") or 0))
+    end)
+    
+    local AscendStat = Tabs.Stats:CreateParagraph(
+        "AscendStat",
+        {
+            Title = "Ascend:",
+            Content = tycoonNum.Values.Values:GetAttribute("Ascension")
+        }
+    )
+    tycoonNum.Values.Values:GetAttributeChangedSignal("Ascension"):Connect(function()
+        AscendStat:SetValue(tostring(tycoonNum.Values.Values:GetAttribute("Ascension") or 0))
+    end)
+
     local function GetNextPurchase()
         local tycoon = Tycoon.getLocal()
     
@@ -100,8 +157,8 @@ if game.GameId == 79268393072444 then
                 return
             end
     
-            while getgenv().UIRunning do
-                if getgenv().farmsettings.upgrade then
+            while UIActive do
+                if Options.Upgrade.Value then
     
                     local earners = analyzer:GetEarners()
     
@@ -138,8 +195,8 @@ if game.GameId == 79268393072444 then
     
     local function startAutoRebirth()
         task.spawn(function()
-            while getgenv().UIRunning do
-                if getgenv().farmsettings.rebirth then
+            while UIActive do
+                if Options.Rebirth.Value then
                     local success, err = pcall(function()
                         local tycoon = Tycoon.getLocal()
     
@@ -162,14 +219,12 @@ if game.GameId == 79268393072444 then
                             Huge.max(currentInvestors, Huge.toHuge(100))
                         )
     
-                        --print("Investor multiplier:", Huge.formatShort(multiplier) .. "x")
     
                         if multiplier >= Huge.toHuge(TARGET_MULTIPLIER) then
-                            --print("Auto rebirthing!")
     
                             rebirth:RebirthAsync()
     
-                            if getgenv().farmsettings.power then
+                            if Options.Power.Value then
                                 local powers = tycoon:GetComponent(ClientTycoonPowers)
                                 local balance = tycoon:GetComponent(ClientTycoonBalances)
     
@@ -190,8 +245,6 @@ if game.GameId == 79268393072444 then
                                     end
                                 end
                             end
-    
-                            --print("Result:", result)
                         end
                     end)
     
@@ -207,8 +260,8 @@ if game.GameId == 79268393072444 then
     
     local function startAutoEvolution()
         task.spawn(function()
-            while getgenv().UIRunning do
-                if getgenv().farmsettings.evolution then
+            while UIActive do
+                if Options.Evolution.Value then
                     local success, err = pcall(function()
                         local tycoon = Tycoon.getLocal()
     
@@ -225,15 +278,12 @@ if game.GameId == 79268393072444 then
     
                         local progress, bonus = evolution:GetEvolutionProgress()
     
-                        --print("Evolution progress:", progress)
     
                         if progress >= 1 then
-                            --print("Evolving!")
     
                             local oldEvolution = evolution:GetEvolution()
                             local newEvolution, investors = evolution:EvolveAsync()
     
-                            --print("Result:", newEvolution, investors)
                         end
                     end)
     
@@ -263,29 +313,27 @@ if game.GameId == 79268393072444 then
             return
         end
     
-        print(introPurchase:IsPurchased())
         local introPrice = introPurchase:GetPrice()
         local cash = balances:GetCash()
     
         if cash >= introPrice then
             local originalSettings = {
-                power = getgenv().farmsettings.power,
-                upgrade = getgenv().farmsettings.upgrade,
-                rebirth = getgenv().farmsettings.rebirth,
-                evolution = getgenv().farmsettings.evolution,
+                power = Options.Power.Value,
+                upgrade = Options.Upgrade.Value,
+                rebirth = Options.Rebirth.Value,
+                evolution = Options.Evolution.Value,
             }
     
-            getgenv().farmsettings.power = false
-            getgenv().farmsettings.upgrade = false
-            getgenv().farmsettings.rebirth = false
-            getgenv().farmsettings.evolution = false
+            Options.Power.Value = false
+            Options.Upgrade.Value = false
+            Options.Rebirth.Value = false
+            Options.Evolution.Value = false
     
             task.wait(1.5)
             local introPrice = introPurchase:GetPrice()
             local cash = balances:GetCash()
         
             if cash >= introPrice then
-                print("enough")
     
                 local timeout = tick() + 15
     
@@ -305,10 +353,8 @@ if game.GameId == 79268393072444 then
                     warn("Intro purchase timed out.")
                 end
     
-                print("Intro staircase bought!")
                 RestoreSettings(originalSettings)
             else
-                print("not enough")
                 RestoreSettings(originalSettings)
             end
         end
@@ -316,8 +362,8 @@ if game.GameId == 79268393072444 then
     
     local function startAutoPurchase()
         task.spawn(function()
-            while getgenv().UIRunning do
-                if getgenv().farmsettings.purchase then
+            while UIActive do
+                if Options.Purchase.Value then
                     local success, err = pcall(function()
                         local tycoon = Tycoon.getLocal()
                         if not tycoon then
@@ -357,15 +403,14 @@ if game.GameId == 79268393072444 then
     
     local function startAutoAscend()
         task.spawn(function()
-            while getgenv().UIRunning do
-                if getgenv().farmsettings.ascend then
+            while UIActive do
+                if Options.Ascend.Value then
     
                     local success, err = pcall(function()
     
                         local tycoon = Tycoon.getLocal()
     
                         if not tycoon then
-                            print("error")
                             return
                         end
     
@@ -374,7 +419,6 @@ if game.GameId == 79268393072444 then
                         local ascension = tycoon:GetComponent(ClientTycoonAscension)
     
                         if not analyzer or not balance or not ascension then
-                            print("error")
                             return
                         end
     
@@ -392,23 +436,21 @@ if game.GameId == 79268393072444 then
                         -- We can afford final ascend requirement
                         if cash >= price then --and not finalPurchase:IsPurchased() then
     
-                            print("Buying final staircase")
     
                             local originalSettings = {
-                                power = getgenv().farmsettings.power,
-                                upgrade = getgenv().farmsettings.upgrade,
-                                rebirth = getgenv().farmsettings.rebirth,
-                                evolution = getgenv().farmsettings.evolution
+                                power = Options.Power.Value,
+                                upgrade = Options.Upgrade.Value,
+                                rebirth = Options.Rebirth.Value,
+                                evolution = Options.Evolution.Value
                             }
     
                             -- Disable all other settings except for purchase
-                            getgenv().farmsettings.purchase = true
-                            getgenv().farmsettings.power = false
-                            getgenv().farmsettings.upgrade = false
-                            getgenv().farmsettings.rebirth = false
-                            getgenv().farmsettings.evolution = false
+                            Options.Purchase.Value = true
+                            Options.Power.Value = false
+                            Options.Upgrade.Value = false
+                            Options.Rebirth.Value = false
+                            Options.Evolution.Value = false
     
-                            print("Enough")
                             local broke = false
                             repeat
                                 task.wait(0.2)
@@ -420,7 +462,6 @@ if game.GameId == 79268393072444 then
                                     purchases = analyzer:GetPurchases()
                                     finalPurchase = purchases["StaircaseStepFinal"]
                                 else
-                                    print("Found out there is not enough in loop")
                                     RestoreSettings(originalSettings)
                                     broke = true
                                 end
@@ -428,7 +469,6 @@ if game.GameId == 79268393072444 then
                             until finalPurchase:IsPurchased() or broke
     
     
-                            print("Final staircase bought, ascending")
     
                             local oldAscension = ascension:GetAscension()
                             ascension:AscendAsync()
@@ -438,16 +478,12 @@ if game.GameId == 79268393072444 then
                             local x = 0
                             repeat
                                 task.wait(0.5)
-                                print("waiting")
                                 x = x + 1
                                 if x % 5 == 0 then
-                                    print("retrying")
                                     oldAscension = ascension:GetAscension()
                                     ascension:AscendAsync()
                                 end
                             until ascension:GetAscension() > oldAscension or x == 26
-    
-                            print("Ascended, restoring settings")
     
                             introPurchased = false
                             RestoreSettings(originalSettings)
@@ -464,55 +500,91 @@ if game.GameId == 79268393072444 then
             end
         end)
     end
-    
-    section1:label("Settings:")
-    
-    section1:toggle("Auto Purchase", true, function(v)
-        getgenv().farmsettings.purchase = v
+
+    local Purchase =
+        Tabs.Farm:CreateToggle("Purchase",{
+            Title = "Auto Purchase",
+            Default = false
+        })
+    Purchase:OnChanged(function()
+        startAutoPurchase()
     end)
-    
-    section1:toggle("Auto Power", false, function(v)
-        getgenv().farmsettings.power = v
+
+    local Power =
+        Tabs.Farm:CreateToggle("Power",{
+            Title = "Auto Power",
+            SubTitle = "Requies Auto Rebirth Enabled",
+            Default = false
+        })
+
+    local Upgrade =
+        Tabs.Farm:CreateToggle("Upgrade",{
+            Title = "Auto Upgrade",
+            Default = false
+        })
+    Upgrade:OnChanged(function()
+        startAutoUpgrade()
     end)
-    
-    section1:toggle("Auto Upgrade", false, function(v)
-        getgenv().farmsettings.upgrade = v
+
+    local Rebirth =
+        Tabs.Farm:CreateToggle("Rebirth",{
+            Title = "Auto Rebirth",
+            Default = false
+        })
+    Rebirth:OnChanged(function()
+        startAutoRebirth()
     end)
-    
-    section1:toggle("Auto Rebirth", false, function(v)
-        getgenv().farmsettings.rebirth = v
+
+    local Evolution =
+        Tabs.Farm:CreateToggle("Evolution",{
+            Title = "Auto Evolution",
+            Default = false
+        })
+    Evolution:OnChanged(function()
+        startAutoEvolution()
     end)
-    
-    section1:toggle("Auto Evolution", false, function(v)
-        getgenv().farmsettings.evolution = v
+
+    local Ascend =
+        Tabs.Farm:CreateToggle("Ascend",{
+            Title = "Auto Ascend",
+            Default = false
+        })
+    Ascend:OnChanged(function()
+        startAutoAscend()
     end)
-    
-    section1:toggle("Auto Ascend", false, function(v)
-        getgenv().farmsettings.ascend = v
+
+    local Render =
+        Tabs.Settings:CreateToggle("Render",{
+            Title = "Disable 3D Rendering",
+            Default = false
+        })
+
+    Render:OnChanged(function()
+        game:GetService("RunService"):Set3dRenderingEnabled(
+            not Options.Render.Value
+        )
     end)
-    
-    startAutoPurchase()
-    startAutoUpgrade()
-    startAutoRebirth()
-    startAutoEvolution()
-    startAutoAscend()
-    
-    getgenv().antiafk = true
-    
-    plr.Idled:Connect(function()
-        if not getgenv().antiafk then return end
-        game:GetService("VirtualUser"):Button2Down(Vector2.new(0, 0), workspace.CurrentCamera.CFrame)
-        game:GetService("VirtualUser"):Button2Up(Vector2.new(0, 0), workspace.CurrentCamera.CFrame)
-    end)
-    
-    -- Settings
-    section2:toggle("Disable 3D Rendering", false, function(v)
-        game:GetService("RunService"):Set3dRenderingEnabled(not v)
-    end)
-    
-    section2:toggle("Anti AFK", true, function(v)
-        getgenv().antiafk = v
-    end)
+
+    local AntiAFK =
+        Tabs.Settings:CreateToggle("AntiAFK",{
+            Title = "Anti AFK",
+            Default = true
+        })
+
+    Window:SelectTab(1)
+
+    SaveManager:SetLibrary(Library)
+    InterfaceManager:SetLibrary(Library)
+
+    SaveManager:IgnoreThemeSettings()
+
+    InterfaceManager:SetFolder("SellLemons")
+    SaveManager:SetFolder("SellLemons")
+
+    InterfaceManager:BuildInterfaceSection(Tabs.Settings)
+    SaveManager:BuildConfigSection(Tabs.Settings)
+
+    SaveManager:LoadAutoloadConfig()
 else
-    warn("This is the wrong game, please ensure the game ID is: 79268393072444")
+    warn("This is the wrong game, please ensure the game ID is: 79268393072444, you game:", game.gameId)
 end
