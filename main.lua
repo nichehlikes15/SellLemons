@@ -1,6 +1,9 @@
 if game.GameId == 7395930870 then
-    local plr = game:GetService("Players").LocalPlayer
+    local Players = game:GetService("Players")
+    local plr = Players.LocalPlayer
     local ReplicatedStorage = game:GetService("ReplicatedStorage")
+    local HttpService = game:GetService("HttpService") --Used for ServerHop Feature
+    local TeleportService = game:GetService("TeleportService") --Used for ServerHop Feature
     
     local Tycoon = require(ReplicatedStorage.Modules.Tycoon.Tycoon)
     local TycoonAnalyzer = require(ReplicatedStorage.Modules.Tycoon.Component.TycoonAnalyzer)
@@ -14,16 +17,22 @@ if game.GameId == 7395930870 then
     local ClientTycoonBalances = require(ReplicatedStorage.Modules.Tycoon.Component.Client.ClientTycoonBalances)
     
     local Config = require(ReplicatedStorage.Config)
-    
-    local TARGET_MULTIPLIER = 100000
+
     local introPurchased = false
     
-    local tycoonNum
-    for _, v in pairs(workspace:GetChildren()) do
-        if v.Name:find("Tycoon") and v:FindFirstChild("Owner").Value == plr then
-            tycoonNum = v
+    local function GetTycoon(player)
+        for _, v in ipairs(workspace:GetChildren()) do
+            if v.Name:find("Tycoon") then
+                local owner = v:FindFirstChild("Owner")
+
+                if owner and owner.Value == player then
+                    return v
+                end
+            end
         end
     end
+
+    local tycoonNum = GetTycoon(plr)
 
     local Library =
         loadstring(
@@ -73,39 +82,118 @@ if game.GameId == 7395930870 then
     Library.Unloaded = function()
         UIActive = false
     end
-    
+
+    local selectedPlayer = plr
+    local selectedTycoon = GetTycoon(plr)
+
+    local statConnections = {}
+
+    local function updatePlayerList()
+        local playerList = {}
+
+        for _, player in ipairs(Players:GetPlayers()) do
+            table.insert(playerList, player.Name)
+        end
+
+        return playerList
+    end
+
+    local PlayersDropdown = Tabs.Stats:CreateDropdown(
+        "Players",
+        {
+            Title = "Choose Player",
+            Values = updatePlayerList(),
+            Multi = false,
+            Default = plr.Name
+        }
+    )
+
     local RebirthStat = Tabs.Stats:CreateParagraph(
         "RebirthStat",
         {
             Title = "Total Rebirth:",
-            Content = tycoonNum.Values.Values:GetAttribute("TotalRebirths")
+            Content = ""
         }
     )
-    tycoonNum.Values.Values:GetAttributeChangedSignal("TotalRebirths"):Connect(function()
-        RebirthStat:SetValue(tostring(tycoonNum.Values.Values:GetAttribute("TotalRebirths") or 0))
-    end)
-    
+
     local EvolveStat = Tabs.Stats:CreateParagraph(
         "EvolveStat",
         {
             Title = "Total Evolves:",
-            Content = tycoonNum.Values.Values:GetAttribute("TotalEvolves")
+            Content = ""
         }
     )
-    tycoonNum.Values.Values:GetAttributeChangedSignal("TotalEvolves"):Connect(function()
-        EvolveStat:SetValue(tostring(tycoonNum.Values.Values:GetAttribute("TotalEvolves") or 0))
-    end)
-    
+
     local AscendStat = Tabs.Stats:CreateParagraph(
         "AscendStat",
         {
-            Title = "Ascend:",
-            Content = tycoonNum.Values.Values:GetAttribute("Ascension")
+            Title = "Ascension:",
+            Content = ""
         }
     )
-    tycoonNum.Values.Values:GetAttributeChangedSignal("Ascension"):Connect(function()
-        AscendStat:SetValue(tostring(tycoonNum.Values.Values:GetAttribute("Ascension") or 0))
+
+    local function UpdateStats()
+        if not selectedTycoon then
+            return
+        end
+
+        local values = selectedTycoon.Values.Values
+
+        RebirthStat:SetValue(tostring(values:GetAttribute("TotalRebirths") or 0))
+        EvolveStat:SetValue(tostring(values:GetAttribute("TotalEvolves") or 0))
+        AscendStat:SetValue(tostring(values:GetAttribute("Ascension") or 0))
+    end
+
+    local function ConnectPlayer(player)
+        for _, connection in ipairs(statConnections) do
+            connection:Disconnect()
+        end
+
+        table.clear(statConnections)
+
+        selectedPlayer = player
+        selectedTycoon = GetTycoon(player)
+
+        if not selectedTycoon then
+            RebirthStat:SetValue("N/A")
+            EvolveStat:SetValue("N/A")
+            AscendStat:SetValue("N/A")
+            return
+        end
+
+        local values = selectedTycoon.Values.Values
+
+        UpdateStats()
+
+        table.insert(statConnections,
+            values:GetAttributeChangedSignal("TotalRebirths"):Connect(UpdateStats)
+        )
+
+        table.insert(statConnections,
+            values:GetAttributeChangedSignal("TotalEvolves"):Connect(UpdateStats)
+        )
+
+        table.insert(statConnections,
+            values:GetAttributeChangedSignal("Ascension"):Connect(UpdateStats)
+        )
+    end
+
+    PlayersDropdown:OnChanged(function(value)
+        local player = Players:FindFirstChild(value)
+
+        if player then
+            ConnectPlayer(player)
+        end
     end)
+
+    local function RefreshDropdown()
+        PlayersDropdown:SetValues(updatePlayerList())
+    end
+
+    Players.PlayerAdded:Connect(RefreshDropdown)
+    Players.PlayerRemoving:Connect(RefreshDropdown)
+
+    ConnectPlayer(plr)
 
     local function GetNextPurchase()
         local tycoon = Tycoon.getLocal()
@@ -220,7 +308,7 @@ if game.GameId == 7395930870 then
                         )
     
     
-                        if multiplier >= Huge.toHuge(TARGET_MULTIPLIER) then
+                        if multiplier >= Huge.toHuge(tonumber(Options.RebirthMultiplier.Value)) then
     
                             rebirth:RebirthAsync()
     
@@ -535,6 +623,14 @@ if game.GameId == 7395930870 then
         startAutoRebirth()
     end)
 
+    local RebirthMultiplier = Tabs.Farm:CreateInput("RebirthMultiplier", {
+        Title = "Rebirth Multiplier",
+        Default = 100,
+        Placeholder = "100",
+        Numeric = true,
+        Finished = true,
+    })
+
     local Evolution =
         Tabs.Farm:CreateToggle("Evolution",{
             Title = "Auto Evolution",
@@ -553,6 +649,7 @@ if game.GameId == 7395930870 then
         startAutoAscend()
     end)
 
+
     local Render =
         Tabs.Settings:CreateToggle("Render",{
             Title = "Disable 3D Rendering",
@@ -570,6 +667,37 @@ if game.GameId == 7395930870 then
             Title = "Anti AFK",
             Default = true
         })
+
+    Tabs.Settings:CreateButton({
+        Title = "Server Hop",
+        Description = "Join a different server",
+        Callback = function()
+            local success, response = pcall(function()
+                return game:HttpGet(
+                    ("https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=Desc&limit=100&excludeFullGames=true")
+                    :format(game.PlaceId)
+                )
+            end)
+
+            if not success then
+                warn("Failed to fetch server list.")
+                return
+            end
+
+            local servers = HttpService:JSONDecode(response)
+
+            for _, server in ipairs(servers.data) do
+                if server.playing < server.maxPlayers and server.id ~= game.JobId then
+                    TeleportService:TeleportToPlaceInstance(
+                        game.PlaceId,
+                        server.id,
+                        game.Players.LocalPlayer
+                    )
+                    break
+                end
+            end
+        end
+    })
 
     Window:SelectTab(1)
 
