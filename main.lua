@@ -83,6 +83,19 @@ if game.GameId == 7395930870 then
         UIActive = false
     end
 
+    Library:Notify({
+        Title = "Welcome!",
+        Content = "If you enjoy this script, please consider giving it a like. It really helps support future updates. ❤️",
+        Duration = 15
+    })
+
+    local function RestoreSettings(settings)
+        Options.Power.Value = settings.power
+        Options.Upgrade.Value = settings.upgrade
+        Options.Rebirth.Value = settings.rebirth
+        Options.Evolution.Value = settings.evolution
+    end
+
     local selectedPlayer = plr
     local selectedTycoon = GetTycoon(plr)
 
@@ -199,14 +212,23 @@ if game.GameId == 7395930870 then
         local tycoon = Tycoon.getLocal()
     
         if not tycoon then
-            warn("No tycoon found")
+            Library:Notify({
+                Title = "Error",
+                Content = "No tycoon has been found for you, please either wait or rejoin the game.",
+                Duration = 7
+            })
+
             return nil
         end
     
         local analyzer = tycoon:GetComponent(TycoonAnalyzer)
     
         if not analyzer then
-            warn("No TycoonAnalyzer found")
+            Library:Notify({
+                Title = "Error",
+                Content = "Missing crucial game files",
+                Duration = 7
+            })
             return nil
         end
     
@@ -241,7 +263,11 @@ if game.GameId == 7395930870 then
             local balances = tycoon:GetComponent(ClientTycoonBalances)
     
             if not analyzer or not balances then
-                warn("Missing Tycoon components")
+                Library:Notify({
+                    Title = "Error",
+                    Content = "Missing crucial game files",
+                    Duration = 7
+                })
                 return
             end
     
@@ -266,6 +292,11 @@ if game.GameId == 7395930870 then
                                     end)
     
                                     if not success then
+                                        Library:Notify({
+                                            Title = "Error",
+                                            Content = "Upgrade failed, check console for logs and error",
+                                            Duration = 7
+                                        })
                                         warn("Upgrade failed:", name, err)
                                     end
     
@@ -328,6 +359,11 @@ if game.GameId == 7395930870 then
                                         end)
     
                                         if not success then
+                                            Library:Notify({
+                                                Title = "Error",
+                                                Content = "Power upgrade failed, check console for logs",
+                                                Duration = 7
+                                            })
                                             warn("Failed upgrading:", powerName, err)
                                         end
                                     end
@@ -337,6 +373,11 @@ if game.GameId == 7395930870 then
                     end)
     
                     if not success then
+                        Library:Notify({
+                            Title = "Error",
+                            Content = "Rebirth failed, check console for logs",
+                            Duration = 7
+                        })
                         warn("Rebirth failed:", err)
                     end
                 end
@@ -376,6 +417,11 @@ if game.GameId == 7395930870 then
                     end)
     
                     if not success then
+                        Library:Notify({
+                            Title = "Error",
+                            Content = "Evolution failed, check console for logs",
+                            Duration = 7
+                        })
                         warn("Evolution failed:", err)
                     end
                 end
@@ -438,7 +484,11 @@ if game.GameId == 7395930870 then
                 until not introPurchase or introPurchase:IsPurchased() or tick() > timeout
     
                 if tick() > timeout then
-                    warn("Intro purchase timed out.")
+                    Library:Notify({
+                        Title = "Error",
+                        Content = "Intro staircase purchase has timed out",
+                        Duration = 4
+                    })
                 end
     
                 RestoreSettings(originalSettings)
@@ -480,6 +530,11 @@ if game.GameId == 7395930870 then
                     end)
     
                     if not success then
+                        Library:Notify({
+                            Title = "Error",
+                            Content = "Auto purchase failed, check console for logs",
+                            Duration = 7
+                        })
                         warn("Auto Purchase Error:", err)
                     end
                 end
@@ -514,7 +569,11 @@ if game.GameId == 7395930870 then
                         local finalPurchase = purchases["StaircaseStepFinal"]
     
                         if not finalPurchase then
-                            warn("Final staircase not found")
+                            Library:Notify({
+                                Title = "Error",
+                                Content = "Final Staircase button not found",
+                                Duration = 7
+                            })
                             return
                         end
     
@@ -523,8 +582,6 @@ if game.GameId == 7395930870 then
     
                         -- We can afford final ascend requirement
                         if cash >= price then --and not finalPurchase:IsPurchased() then
-    
-    
                             local originalSettings = {
                                 power = Options.Power.Value,
                                 upgrade = Options.Upgrade.Value,
@@ -576,11 +633,15 @@ if game.GameId == 7395930870 then
                             introPurchased = false
                             RestoreSettings(originalSettings)
                         end
-    
                     end)
     
                     if not success then
                         warn("Ascend failed:", err)
+                        Library:Notify({
+                            Title = "Error",
+                            Content = "Ascend failed, check console for logs and error",
+                            Duration = 7
+                        })
                     end
                 end
     
@@ -680,6 +741,11 @@ if game.GameId == 7395930870 then
             end)
 
             if not success then
+                Library:Notify({
+                    Title = "Error",
+                    Content = "Server hop failed, failed to fetch server list",
+                    Duration = 7
+                })
                 warn("Failed to fetch server list.")
                 return
             end
