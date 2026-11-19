@@ -520,6 +520,10 @@ if game.GameId == 7395930870 then
                         if purchase.DisplayName == "Cup Stand" or purchase.DisplayName == "Juicer" then
                             tycoonNum.Remotes.WakeIncomeStream:InvokeServer("LemonStand")
                         end
+                        
+                        if purchase.DisplayName == "Product Display" or purchase.DisplayName == "Kiosk Manager" then
+                                    tycoonNum.Remotes.WakeIncomeStream:InvokeServer("OxygenPump")
+                        end
     
                         local cash = balances:GetCash()
                         local price = purchase:GetPrice()
